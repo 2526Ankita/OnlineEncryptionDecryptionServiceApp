@@ -3,10 +3,12 @@ package com.example.onlineencryptionserviceapp;
 import android.os.Bundle;
 import android.view.View;
 import android.text.TextUtils;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
@@ -18,12 +20,14 @@ public class MainActivity extends AppCompatActivity {
     private Button decryptButton;
     private TextView ciphertextTextView;
     private TextView decryptedTextView;
+    private Toast toast;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Toast.makeText(this, "Welcome to my App", Toast.LENGTH_SHORT).show();
+        toast = Toast.makeText(this, "Welcome to my App", Toast.LENGTH_SHORT);
+        toast.show();
 
         plaintextEditText = findViewById(R.id.plaintextEditText);
         keyEditText1 = findViewById(R.id.keyEditText1);
@@ -41,7 +45,7 @@ public class MainActivity extends AppCompatActivity {
                 String encryptionKeyString = keyEditText1.getText().toString();
 
                 if (TextUtils.isEmpty(plaintext) || TextUtils.isEmpty(encryptionKeyString)) {
-                    Toast.makeText(MainActivity.this, "Please enter the plaintext and encryption key", Toast.LENGTH_SHORT).show();
+                    showToast("Please enter the plaintext and encryption key");
                     return;
                 }
 
@@ -49,9 +53,9 @@ public class MainActivity extends AppCompatActivity {
                     int key = Integer.parseInt(encryptionKeyString);
                     String ciphertext = encryptRailFenceCipher(plaintext, key);
                     ciphertextTextView.setText(ciphertext);
-                    Toast.makeText(MainActivity.this, "Encryption successful!", Toast.LENGTH_SHORT).show();
+                    showToast("Encryption successful!");
                 } catch (NumberFormatException e) {
-                    Toast.makeText(MainActivity.this, "Invalid key!", Toast.LENGTH_SHORT).show();
+                    showToast("Invalid key!");
                 }
             }
         });
@@ -72,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
                 String decryptionKeyString = keyEditText2.getText().toString();
 
                 if (TextUtils.isEmpty(ciphertext) || TextUtils.isEmpty(decryptionKeyString)) {
-                    Toast.makeText(MainActivity.this, "Please enter the ciphertext and decryption key", Toast.LENGTH_SHORT).show();
+                    showToast("Please enter the ciphertext and decryption key");
                     return;
                 }
 
@@ -80,9 +84,9 @@ public class MainActivity extends AppCompatActivity {
                     int key = Integer.parseInt(decryptionKeyString);
                     String decryptedText = decryptRailFenceCipher(ciphertext, key);
                     decryptedTextView.setText(decryptedText);
-                    Toast.makeText(MainActivity.this, "Decryption successful!", Toast.LENGTH_SHORT).show();
+                    showToast("Decryption successful!");
                 } catch (NumberFormatException e) {
-                    Toast.makeText(MainActivity.this, "Invalid key!", Toast.LENGTH_SHORT).show();
+                    showToast("Invalid key!");
                 }
             }
         });
@@ -97,91 +101,51 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void showToast(String message) {
+        toast.setText(message);
+        toast.show();
+    }
+
     private String encryptRailFenceCipher(String plaintext, int key) {
         int len = plaintext.length();
-        char[][] rail = new char[key][len];
+        StringBuilder rail = new StringBuilder(len * key);
         for (int i = 0; i < key; i++) {
-            for (int j = 0; j < len; j++) {
-                rail[i][j] = '\n';
-            }
-        }
-
-        boolean down = false;
-        int row = 0, col = 0;
-        for (int i = 0; i < len; i++) {
-            if (row == 0 || row == key - 1) {
+            boolean down = false;
+            int pos = i;
+            while (pos < len) {
+                rail.append(plaintext.charAt(pos));
+                if (i == 0 || i == key - 1) {
+                    pos += 2 * (key - 1);
+                } else if (down) {
+                    pos += 2 * (key - i - 1);
+                } else {
+                    pos += 2 * i;
+                }
                 down = !down;
             }
-            if (Character.isLetterOrDigit(plaintext.charAt(i)) || Character.isWhitespace(plaintext.charAt(i))) {
-                rail[row][col++] = plaintext.charAt(i);
-            }
-            if (down) {
-                row++;
-            } else {
-                row--;
-            }
         }
-
-        StringBuilder cipherText = new StringBuilder();
-        for (int i = 0; i < key; i++) {
-            for (int j = 0; j < len; j++) {
-                if (rail[i][j] != '\n') {
-                    cipherText.append(rail[i][j]);
-                }
-            }
-        }
-
-        return cipherText.toString();
+        return rail.toString();
     }
 
     private String decryptRailFenceCipher(String ciphertext, int key) {
         int len = ciphertext.length();
-        char[][] rail = new char[key][len];
+        StringBuilder rail = new StringBuilder(len);
+        int cycle = 2 * (key - 1);
         for (int i = 0; i < key; i++) {
-            for (int j = 0; j < len; j++) {
-                rail[i][j] = '\n';
-            }
-        }
-
-        boolean down = false;
-        int row = 0, col = 0;
-        for (int i = 0; i < len; i++) {
-            if (row == 0 || row == key - 1) {
-                down = !down;
-            }
-            rail[row][col++] = '*';
-            if (down) {
-                row++;
-            } else {
-                row--;
-            }
-        }
-
-        int index = 0;
-        for (int i = 0; i < key; i++) {
-            for (int j = 0; j < len; j++) {
-                if (rail[i][j] == '*' && index < len) {
-                    rail[i][j] = ciphertext.charAt(index++);
+            int pos = i;
+            boolean down = false;
+            while (pos < len) {
+                rail.append(ciphertext.charAt(pos));
+                if (i == 0 || i == key - 1) {
+                    pos += cycle;
+                } else if (down) {
+                    pos += cycle - 2 * i;
+                } else {
+                    pos += 2 * i;
                 }
-            }
-        }
-
-        StringBuilder decryptedText = new StringBuilder();
-        row = 0;
-        col = 0;
-        for (int i = 0; i < len; i++) {
-            if (row == 0 || row == key - 1) {
                 down = !down;
             }
-            if (rail[row][col] != '*') {
-                decryptedText.append(rail[row][col++]);
-            }
-            if (down) {
-                row++;
-            } else {
-                row--;
-            }
         }
-        return decryptedText.toString();
+        return rail.toString();
     }
 }
