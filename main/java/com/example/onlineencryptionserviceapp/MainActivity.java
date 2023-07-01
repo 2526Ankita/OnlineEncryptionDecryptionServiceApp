@@ -1,7 +1,6 @@
 package com.example.onlineencryptionserviceapp;
 
 import android.os.Bundle;
-import android.view.View;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
@@ -129,13 +128,16 @@ public class MainActivity extends AppCompatActivity {
 
     private String decryptRailFenceCipher(String ciphertext, int key) {
         int len = ciphertext.length();
-        StringBuilder rail = new StringBuilder(len);
+        char[] rail = new char[len];
         int cycle = 2 * (key - 1);
+        int index = 0;
+
         for (int i = 0; i < key; i++) {
             int pos = i;
             boolean down = false;
+
             while (pos < len) {
-                rail.append(ciphertext.charAt(pos));
+                rail[pos] = ciphertext.charAt(index++);
                 if (i == 0 || i == key - 1) {
                     pos += cycle;
                 } else if (down) {
@@ -146,6 +148,17 @@ public class MainActivity extends AppCompatActivity {
                 down = !down;
             }
         }
-        return rail.toString();
+
+        StringBuilder plaintext = new StringBuilder(len);
+        int railIndex = 0;
+
+        for (int i = 0; i < len; i++) {
+            if (railIndex < len) {
+                plaintext.append(rail[railIndex]);
+                railIndex++;
+            }
+        }
+
+        return plaintext.toString();
     }
 }
